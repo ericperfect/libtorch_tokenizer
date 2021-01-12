@@ -2,26 +2,16 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <iterator>
 #include <map>
 #include <regex>
-#include <sstream>
 #include "unicode.h"
 #include "uninorms.h"
 #include <codecvt>
 #include <algorithm>
-
-#include "tokenizer.h"
-
-#include <iostream>
-#include <sstream>
 #include <boost/regex/pending/unicode_iterator.hpp>
 #include <boost/spirit/include/qi.hpp>
-#include <boost/range.hpp>
-
-#include <iterator>
 #include <cstdint>
-#include <vector>
+#include "tokenizer.h"
 
 using namespace std;
 using namespace ufal::unilib;
