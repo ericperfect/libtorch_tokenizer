@@ -6,7 +6,7 @@ The tokenizer can tokenize Chinese-English bilingual in Linux.
 
 Requirements
 
--[x] Boost
- 
+- [x] Boost
+  
  ### C++ unicode support 
 - http://github.com/ufal/unilib
