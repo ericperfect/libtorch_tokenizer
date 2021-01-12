@@ -28,7 +28,6 @@ string join(const char *a, char *b)
 }
 
 
-
 void tokenize(string text, vector<string> &tokens, vector<float> &valid_positions)
 {
     vector<string> words = basictokenizer.tokenize(text);
@@ -49,7 +48,7 @@ void tokenize(string text, vector<string> &tokens, vector<float> &valid_position
 }
 
 void encode(string text, vector<float> &input_ids, vector<float> &input_mask, vector<float> &segment_ids,
-                vector<float> &valid_positions)
+            vector<float> &valid_positions)
 {
     vector<string> tokens;
     tokenize(text, tokens, valid_positions);
@@ -75,12 +74,14 @@ void encode(string text, vector<float> &input_ids, vector<float> &input_mask, ve
 }
 
 template<typename T>
-void printVector(vector<T>& v) {
+void printVector(vector<T> &v)
+{
 
-	for (typename vector<T>::iterator it = v.begin(); it != v.end(); it++) {
-		cout << *it << " ";
-	}
-	cout << endl;
+    for (typename vector<T>::iterator it = v.begin(); it != v.end(); it++)
+    {
+        cout << *it << " ";
+    }
+    cout << endl;
 }
 
 
