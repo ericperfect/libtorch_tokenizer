@@ -15,9 +15,9 @@ using namespace std;
 BertTokenizer tokenizer;
 BasicTokenizer basictokenizer;
 
-int max_seq_length = 20;
+int max_seq_length = 512;
 
-string join(const char *a, char *b)
+string join(const char *a, const char *b)
 {
     string message;
     message.reserve(strlen(a) + 1 + strlen(b));
@@ -52,6 +52,10 @@ void encode(string text, vector<float> &input_ids, vector<float> &input_mask, ve
 {
     vector<string> tokens;
     tokenize(text, tokens, valid_positions);
+    if (tokens.size() > max_seq_length - 2)
+    {
+        tokens.assign(tokens.begin(), tokens.begin() + max_seq_length - 2);
+    }
     // insert "[CLS}"
     tokens.insert(tokens.begin(), "[CLS]");
     valid_positions.insert(valid_positions.begin(), 1.0);
@@ -88,24 +92,25 @@ void printVector(vector<T> &v)
 int main(int argc, const char *argv[])
 {
     const char *model = argv[1];
-    string text;
+    string textA;
+    string textB;
     tokenizer.add_vocab(join(model, "vocab.txt").c_str());
     while (true)
     {
-        cout << "\n" << "Input -> ";
-        getline(cin, text);
+        cout << "\n" << "Input A -> ";
+        getline(cin, textA);
+        cout << "\n" << "Input B -> ";
+        getline(cin, textB);
         vector<float> input_ids;
         vector<float> input_mask;
         vector<float> segment_ids;
-        vector<float> valid_positions;
         vector<string> tokens;
-        tokens = tokenizer.tokenize(text);
-        encode(text, input_ids, input_mask, segment_ids, valid_positions);
+        const char *truncation_strategy = "only_first";
+        tokenizer.encode(textA, textB, input_ids, input_mask, segment_ids, max_seq_length, truncation_strategy);
         printVector(tokens);
         printVector(input_ids);
         printVector(input_mask);
         printVector(segment_ids);
-        printVector(valid_positions);
     }
 
 }

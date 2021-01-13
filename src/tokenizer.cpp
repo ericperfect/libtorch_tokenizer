@@ -288,7 +288,8 @@ std::string BasicTokenizer::utf8chr(int cp)
     return std::string(c);
 }
 
-std::string BasicTokenizer::_tokenize_chinese_chars(std::string text)
+std::string BasicTokenizer::
+_tokenize_chinese_chars(std::string text)
 {
     auto &&utf8_text = text;
     u8_to_u32_iterator<std::string::iterator>
@@ -296,10 +297,6 @@ std::string BasicTokenizer::_tokenize_chinese_chars(std::string text)
     vector<uint32_t> result;
     parse(tbegin, tend, *standard_wide::char_, result);
     std::string output;
-//    int len = 0;
-//    char * char_array = new char [text.length()+1];
-//    strcpy (char_array, text.c_str());
-//    while(char_array[len] != '\0')
     for (auto &&code_point : result)
     {
         int cp = code_point;
@@ -311,7 +308,7 @@ std::string BasicTokenizer::_tokenize_chinese_chars(std::string text)
         }
         else
         {
-            output += code_point;
+            output.append(utf8chr(code_point));
         }
 //        ++len;
     }
@@ -329,7 +326,11 @@ bool BasicTokenizer::_is_chinese_char(int cp)
             || (cp >= 0x2B740 && cp <= 0x2B81F)
             || (cp >= 0x2B820 && cp <= 0x2CEAF)
             || (cp >= 0xF900 && cp <= 0xFAFF)
-            || (cp >= 0x2F800 && cp <= 0x2FA1F)
+            || (cp >= 0x2F800 && cp <= 0x2FA1F) || cp == 0x3002 || cp == 0xFF1F || cp == 0xFF01 || cp == 0xFF0C ||
+            cp == 0x3001 || cp == 0xFF1B || cp == 0xFF1A || cp == 0x300C || cp == 0x300D || cp == 0x300E ||
+            cp == 0x300F || cp == 0x2018 || cp == 0x2019 || cp == 0x201C || cp == 0x201D || cp == 0xFF08 ||
+            cp == 0xFF09 || cp == 0x3014 || cp == 0x3015 || cp == 0x3010 || cp == 0x3011 || cp == 0x2014 ||
+            cp == 0x2026 || cp == 0x2013 || cp == 0xFF0E || cp == 0x300A || cp == 0x300B || cp == 0x3008 || cp == 0x3009
             )
         return true;
     else
@@ -340,7 +341,6 @@ bool BasicTokenizer::_is_chinese_char(int cp)
 vector<std::string> BasicTokenizer::tokenize(std::string text)
 {
 //    text = _clean_text(text);
-
     text = _tokenize_chinese_chars(text);
     vector<std::string> orig_tokens = whitespace_tokenize(text);
     vector<std::string> split_tokens;
@@ -365,6 +365,51 @@ vector<std::string> BasicTokenizer::tokenize(std::string text)
     return whitespace_tokenize(temp_text);
 }
 
+void BasicTokenizer::truncate_sequences(
+        vector<std::string> &tokens_A, vector<std::string> &tokens_B, const char *truncation_strategy = "longest_first",
+        int max_seq_length = 509)
+{
+    int length = tokens_A.size() + tokens_B.size();
+    if (strcmp(truncation_strategy, "longest_first") == 0)
+    {
+        while (length > max_seq_length)
+        {
+            if (tokens_A.empty() || tokens_A.size() > tokens_B.size())
+            {
+                tokens_A.pop_back();
+            }
+            else
+            {
+                tokens_B.pop_back();
+            }
+            --length;
+        }
+    }
+    else if (strcmp(truncation_strategy, "only_first") == 0)
+    {
+        while (length > max_seq_length && !tokens_A.empty())
+        {
+            tokens_A.pop_back();
+            --length;
+        }
+    }
+    else if (strcmp(truncation_strategy, "only_second") == 0)
+    {
+        while (length > max_seq_length && !tokens_B.empty())
+        {
+            tokens_B.pop_back();
+            --length;
+        }
+    }
+    else if (strcmp(truncation_strategy, "do_not_truncate") == 0)
+    {
+        assert((length < max_seq_length));
+    }
+    else
+    {
+        cerr << "invalid truncation strategy.  skipping trancation" << endl;
+    }
+}
 
 void WordpieceTokenizer::add_vocab(map<std::string, int> vocab)
 {
@@ -475,3 +520,83 @@ vector<float> BertTokenizer::convert_tokens_to_ids(vector<std::string> tokens)
         cout << "Token indices sequence length is longer than the specified maximum";
     return ids;
 }
+
+void
+BertTokenizer::encode(std::string textA, std::string textB, vector<float> &input_ids, vector<float> &input_mask,
+                      vector<float> &segment_ids, int max_seq_length, const char *truncation_strategy)
+{
+    BasicTokenizer basictokenizer;
+    vector<std::string> tokens_A;
+    vector<std::string> words = basictokenizer.tokenize(textA);
+    vector<std::string> token;
+    vector<std::string>::iterator itr;
+    for (itr = words.begin(); itr < words.end(); itr++)
+    {
+        token = this->tokenize(*itr);
+        tokens_A.insert(tokens_A.end(), token.begin(), token.end());
+    }
+    if (textB == "")
+    {
+        if (tokens_A.size() > max_seq_length - 2)
+        {
+            tokens_A.assign(tokens_A.begin(), tokens_A.begin() + max_seq_length - 2);
+        }
+        // insert "[CLS}"
+        tokens_A.insert(tokens_A.begin(), "[CLS]");
+        // insert "[SEP]"
+        tokens_A.push_back("[SEP]");
+        for (int i = 0; i < tokens_A.size(); i++)
+        {
+            segment_ids.push_back(0.0);
+            input_mask.push_back(1.0);
+        }
+        input_ids = this->convert_tokens_to_ids(tokens_A);
+        while (input_ids.size() < max_seq_length)
+        {
+            input_ids.push_back(0.0);
+            input_mask.push_back(0.0);
+            segment_ids.push_back(0.0);
+        }
+    }
+    else
+    {
+        vector<std::string> tokens_B;
+        words = basictokenizer.tokenize(textB);
+        for (itr = words.begin(); itr < words.end(); itr++)
+        {
+            token = this->tokenize(*itr);
+            tokens_B.insert(tokens_B.end(), token.begin(), token.end());
+        }
+        basictokenizer.truncate_sequences(tokens_A, tokens_B, truncation_strategy, max_seq_length = max_seq_length - 3);
+        // insert "[CLS}"
+        tokens_A.insert(tokens_A.begin(), "[CLS]");
+        // insert "[SEP]"
+        tokens_A.push_back("[SEP]");
+        for (int i = 0; i < tokens_A.size(); i++)
+        {
+            segment_ids.push_back(0.0);
+            input_mask.push_back(1.0);
+        }
+        // insert "[SEP]"
+        tokens_B.push_back("[SEP]");
+        for (int i = 0; i < tokens_B.size(); i++)
+        {
+            segment_ids.push_back(0.0);
+            input_mask.push_back(1.0);
+        }
+        tokens_A.insert(tokens_A.end(), tokens_B.begin(), tokens_B.end());
+        // Padding
+        input_ids = this->convert_tokens_to_ids(tokens_A);
+        while (input_ids.size() < max_seq_length)
+        {
+            input_ids.push_back(0.0);
+            input_mask.push_back(0.0);
+            segment_ids.push_back(0.0);
+        }
+    }
+    for (auto &&token:tokens_A)
+    {
+        cout << token << " ";
+    }
+}
+
