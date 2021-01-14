@@ -567,7 +567,7 @@ BertTokenizer::encode(std::string textA, std::string textB, vector<float> &input
             token = this->tokenize(*itr);
             tokens_B.insert(tokens_B.end(), token.begin(), token.end());
         }
-        basictokenizer.truncate_sequences(tokens_A, tokens_B, truncation_strategy, max_seq_length = max_seq_length - 3);
+        basictokenizer.truncate_sequences(tokens_A, tokens_B, truncation_strategy, max_seq_length - 3);
         // insert "[CLS}"
         tokens_A.insert(tokens_A.begin(), "[CLS]");
         // insert "[SEP]"
@@ -598,5 +598,6 @@ BertTokenizer::encode(std::string textA, std::string textB, vector<float> &input
     {
         cout << token << " ";
     }
+    cout << endl;
 }
 
